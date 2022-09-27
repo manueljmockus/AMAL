@@ -27,15 +27,16 @@ class MSE(Function):
     def forward(ctx, yhat, y):
         ## Garde les valeurs nécessaires pour le backwards
         ctx.save_for_backward(yhat, y)
-        fwd = torch.linalg.norm(yhat - y) / y.size(0)
+        fwd = torch.linalg.norm(yhat - y)**2 / y.size(0)
         return fwd
 
     @staticmethod
     def backward(ctx, grad_output):
         ## Calcul du gradient du module par rapport a chaque groupe d'entrées
         yhat, y = ctx.saved_tensors
-        grad_y = 2 / y.size(0) * grad_output * (yhat - y)
-        return grad_y, grad_y
+        grad_yhat = (2 / y.size(0)) * grad_output * (yhat - y)
+        grad_y = (-2 / y.size(0)) * grad_output * (yhat - y)
+        return grad_yhat, grad_y
         #  TODO:  Renvoyer par les deux dérivées partielles (par rapport à yhat et à y)
 
 

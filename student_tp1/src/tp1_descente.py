@@ -16,7 +16,6 @@ epsilon = 0.05
 writer = SummaryWriter()
 for n_iter in range(100):
     ##  TODO:  Calcul du forward (loss)
-
     # `loss` doit correspondre au coût MSE calculé à cette itération
     # on peut visualiser avec
     # tensorboard --logdir runs/
