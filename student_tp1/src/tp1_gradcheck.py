@@ -5,12 +5,11 @@ from tp1 import mse, linear
 
 yhat = torch.randn(10,5, requires_grad=True, dtype=torch.float64)
 y = torch.randn(10,5, requires_grad=True, dtype=torch.float64)
-test_mse = torch.autograd.gradcheck(mse, (yhat, y), raise_exception=True)
-print("test MSE ok? ", test_mse)
+torch.autograd.gradcheck(mse, (yhat, y))
 
-X = torch.randn(10,5, requires_grad=True, dtype=torch.float64)
-W = torch.randn(5,10, requires_grad=True, dtype=torch.float64)
-b = torch.randn(10, requires_grad=True, dtype=torch.float64)
-test_linear = torch.autograd.gradcheck(linear, (X, W, b), raise_exception=True)
-print("test Linear ok? ", test_linear)
+#  TODO:  Test du gradient de Linear (sur le même modèle que MSE)
+x = torch.randn(10, 4, requires_grad=True, dtype=torch.float64)
+w = torch.randn(4, 8, requires_grad=True, dtype=torch.float64)
+b = torch.randn(8, requires_grad=True, dtype=torch.float64)
 
+torch.autograd.gradcheck(linear, (x, w, b))
