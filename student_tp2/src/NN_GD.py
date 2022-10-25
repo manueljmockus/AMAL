@@ -22,9 +22,8 @@ class DummyNN(nn.Module):
         self.linear2 = nn.Linear(hidden_dim, output_dim)
         self.loss = nn.MSELoss()
     
-    def forward(x, y):
-        yhat = self.linear2(self.activation(self.linear1(x)))
-        return self.loss(yhat, y)
+    def forward(self, x):
+        return self.linear2(self.activation(self.linear1(x)))
 
 class NN(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
@@ -33,20 +32,8 @@ class NN(nn.Module):
         self.activation = nn.Tanh()
         self.linear2 = nn.Linear(hidden_dim, output_dim)
         self.loss = nn.MSELoss()
-        self.layers = self.Sequential(self.linear1, self.activation, self.linear2)
+        self.layers = torch.nn.Sequential(self.linear1, self.activation, self.linear2)
     
-    def forward(x, y):
-        yhat = self.layers(x)
-        return self.loss(x, y)
-
-model = DummyNN(datax.size(1), 32, datay.size(1))
-optim = torch.optim.Adam(model.parameters())
-optim.zero_grad()
-
-
-for epoch in range(100):
-    loss = model(datax, datay)
-    loss.backward()
-    optim.zero_grad()
-    optim.step()
-
+    def forward(self, x):
+        y = self.layers(x)
+        return self.layers(x)
