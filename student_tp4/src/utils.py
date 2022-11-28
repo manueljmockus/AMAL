@@ -38,7 +38,8 @@ class RNN(nn.Module):
         '''
             h : bs, h_dim
         '''
-        return torch.nn.functional.softmax(self.linear_d(h), dim=1)
+        # Softmax not included here
+        return self.linear_d(h)
 
 
 class SampleMetroDataset(Dataset):

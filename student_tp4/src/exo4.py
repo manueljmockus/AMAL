@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset,DataLoader
 
-from utils import RNN2, device
+from utils import RNN, device
 
 ## Liste des symboles autorisés
 LETTRES = string.ascii_letters + string.punctuation+string.digits+' '
@@ -52,9 +52,15 @@ class TrumpDataset(Dataset):
         t = torch.cat([torch.zeros(self.MAX_LEN-t.size(0),dtype=torch.long),t])
         return t[:-1],t[1:]
 
+#Longueur des séquences
+LENGTH = 100
+# Hidden dimension
+DIM_HIDDEN = 64
 #Taille du batch
-BATCH_SIZE = 16
-H_DIM = 32
+BATCH_SIZE = 32
+# Interval between evaluation
+EVAL_EVERY = 10
+
 PATH = "data/"
 
 with open('data/trump_full_speech.txt') as f:
@@ -63,47 +69,51 @@ with open('data/trump_full_speech.txt') as f:
 ds = TrumpDataset(raw_txt, maxlen=20)
 data_train = DataLoader(ds, batch_size=BATCH_SIZE, shuffle=True)
 
-model = RNN2(in_dim=len(id2lettre), embed_dim=64, h_dim=H_DIM)
+model = RNN(in_dim=len(id2lettre), h_dim=DIM_HIDDEN, out_dim=len(id2lettre))
 optim = torch.optim.Adam(model.parameters())
 
 for epoch in range(100):
     epoch_loss = 0
     n_samples = 0
-    acc = 0
     for _, (x, y) in enumerate(data_train):
         optim.zero_grad()
-        init_hstate = torch.zeros(x.size(0), H_DIM)
+        
+        # x : bs, len
+        # y : bs, len
+
+        init_hstate = torch.zeros(x.size(0), DIM_HIDDEN)
 
         x = nn.functional.one_hot(x.transpose(0, 1), num_classes=len(id2lettre)).float()
-        y = nn.functional.one_hot(y, num_classes=len(id2lettre)).float()
+        y = nn.functional.one_hot(y.transpose(0, 1), num_classes=len(id2lettre)).float()
         states = model(x, init_hstate)
 
-        yhat = model.decode(states).transpose(0, 1)
+        yhat = model.decode(states)
         
-        loss = torch.nn.functional.cross_entropy(yhat, y)
-        
+        loss = torch.nn.functional.cross_entropy(yhat, y, reduction='sum')        
         # Log
         epoch_loss += loss.item()
         n_samples += x.size(0)
-        acc += (torch.argmax(yhat) == torch.argmax(y)).sum()
         
         loss.backward()
         optim.step()
     # if epoch % EVAL_EVERY == 0:
     #     epoch_loss_val = 0
     #     n_samples_val = 0
-    #     acc_val = 0
     #     for _, (x, y) in enumerate(data_test):
-    #         init_hstate = torch.zeros(x.size(0), 16)
-    #         states = model(x.transpose(0, 1)[:-HORIZON], init_hstate)
+    #         init_hstate = torch.zeros(x.size(0), DIM_HIDDEN)
+    #         states = model(x.transpose(0, 1), init_hstate)
 
-    #         yhat = model.decode(states[-1])
-    #         loss = torch.nn.functional.cross_entropy(yhat, y)
+    #         x = nn.functional.one_hot(x.transpose(0, 1), num_classes=len(id2lettre)).float()
+    #         y = nn.functional.one_hot(y.transpose(0, 1), num_classes=len(id2lettre)).float()
+    #         states = model(x, init_hstate)
+
+    #         yhat = model.decode(states)
+            
+    #         loss = torch.nn.functional.cross_entropy(yhat, y, reduction='sum')  
             
     #         # Log
     #         epoch_loss_val += loss.item()
     #         n_samples_val += x.size(0)
-    #         acc_val += (torch.argmax(y) == torch.argmax(yhat)).sum()
     #     print(f"Epoch: {epoch}, Test Loss: {epoch_loss_val/n_samples_val}")
     print(f"Epoch: {epoch}, Train Loss: {epoch_loss/n_samples}")
 

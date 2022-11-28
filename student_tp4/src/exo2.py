@@ -1,6 +1,8 @@
 from utils import RNN, device,SampleMetroDataset
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 # Nombre de stations utilisé
 CLASSES = 10
@@ -25,26 +27,26 @@ data_test = DataLoader(ds_test, batch_size=BATCH_SIZE,shuffle=False)
 model = RNN(in_dim=DIM_INPUT, h_dim=16, out_dim=CLASSES)
 optim = torch.optim.Adam(model.parameters())
 
+# Tensorboard : rappel, lancer dans une console tensorboard --logdir runs
+writer = SummaryWriter("runs/tp4_ex2"+datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
 #  TODO:  Question 2 : prédiction de la ville correspondant à une séquence
-for epoch in range(10):
+for epoch in range(100):
     epoch_loss = 0
     n_samples = 0
     acc = 0
-    for _, (x, y) in enumerate(data_train):
-        print(x.size(), y.size())
-        assert False
+    for i, (x, y) in enumerate(data_train):
         optim.zero_grad()
         init_hstate = torch.zeros(x.size(0), 16) 
         states = model(x.transpose(0, 1), init_hstate)
 
         yhat = model.decode(states[-1])
-
-        loss = torch.nn.functional.cross_entropy(yhat, y)
         
+        loss = torch.nn.functional.cross_entropy(yhat, y, reduction='sum')
         # Log
         epoch_loss += loss.item()
         n_samples += x.size(0)
-        acc += (torch.argmax(y) == torch.argmax(yhat)).sum()
+        acc += (y == torch.argmax(yhat.softmax(dim=1), dim=1)).sum()
         
         loss.backward()
         optim.step()
@@ -52,16 +54,20 @@ for epoch in range(10):
         epoch_loss_val = 0
         n_samples_val = 0
         acc_val = 0
-        for _, (x, y) in enumerate(data_test):
+        for i, (x, y) in enumerate(data_test):
             init_hstate = torch.zeros(x.size(0), 16)
             states = model(x.transpose(0, 1), init_hstate)
 
             yhat = model.decode(states[-1])
             loss = torch.nn.functional.cross_entropy(yhat, y)
-            
             # Log
             epoch_loss_val += loss.item()
             n_samples_val += x.size(0)
-            acc_val += (torch.argmax(y) == torch.argmax(yhat)).sum()
+            acc_val += (y == torch.argmax(yhat.softmax(dim=1), dim=1)).sum()
+            
         print(f"Epoch: {epoch}, Test Loss: {epoch_loss_val/n_samples_val}")
+        writer.add_scalar('test_epoch_loss', epoch_loss_val/n_samples_val, epoch)
+        writer.add_scalar('val_accuracy', acc_val/n_samples_val, epoch)
     print(f"Epoch: {epoch}, Train Loss: {epoch_loss/n_samples}")
+    writer.add_scalar('train_epoch_loss', epoch_loss/n_samples, epoch)
+    writer.add_scalar('train_accuracy', acc/n_samples, epoch)
