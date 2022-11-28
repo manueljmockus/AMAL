@@ -53,11 +53,11 @@ class TrumpDataset(Dataset):
         return t[:-1],t[1:]
 
 #Longueur des séquences
-LENGTH = 100
+LENGTH = 10
 # Hidden dimension
 DIM_HIDDEN = 64
 #Taille du batch
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 # Interval between evaluation
 EVAL_EVERY = 10
 
@@ -75,7 +75,7 @@ optim = torch.optim.Adam(model.parameters())
 for epoch in range(100):
     epoch_loss = 0
     n_samples = 0
-    for _, (x, y) in enumerate(data_train):
+    for i, (x, y) in enumerate(data_train):
         optim.zero_grad()
         
         # x : bs, len
@@ -96,24 +96,14 @@ for epoch in range(100):
         
         loss.backward()
         optim.step()
-    # if epoch % EVAL_EVERY == 0:
-    #     epoch_loss_val = 0
-    #     n_samples_val = 0
-    #     for _, (x, y) in enumerate(data_test):
-    #         init_hstate = torch.zeros(x.size(0), DIM_HIDDEN)
-    #         states = model(x.transpose(0, 1), init_hstate)
-
-    #         x = nn.functional.one_hot(x.transpose(0, 1), num_classes=len(id2lettre)).float()
-    #         y = nn.functional.one_hot(y.transpose(0, 1), num_classes=len(id2lettre)).float()
-    #         states = model(x, init_hstate)
-
-    #         yhat = model.decode(states)
-            
-    #         loss = torch.nn.functional.cross_entropy(yhat, y, reduction='sum')  
-            
-    #         # Log
-    #         epoch_loss_val += loss.item()
-    #         n_samples_val += x.size(0)
-    #     print(f"Epoch: {epoch}, Test Loss: {epoch_loss_val/n_samples_val}")
+    if epoch % EVAL_EVERY == 0:
+        hstate = torch.zeros(1, DIM_HIDDEN)
+        seq = ""
+        current_symbol = lettre2id[""]
+        while len(seq) < LENGTH:
+            # print(seq, len(seq))
+            one_hot = nn.functional.one_hot(torch.tensor(current_symbol), num_classes=len(id2lettre)).float()
+            current_symbol = model.decode(model.one_step(one_hot.unsqueeze(0), hstate)).softmax(dim=1).argmax().item()
+            seq += id2lettre[int(current_symbol)]
+        print("Generated sequence : ", seq)
     print(f"Epoch: {epoch}, Train Loss: {epoch_loss/n_samples}")
-
